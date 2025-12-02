@@ -5,25 +5,25 @@ header('Content-Type: application/json');
 
 requireLogin();
 
-// Chấp nhận cả PUT và POST (POST cho FormData, PUT cho JSON)
+// Accept PUT and POST (POST cho FormData, PUT cho JSON)
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Phương thức không được phép']);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit();
 }
 
-// Kiểm tra xem là FormData hay JSON
-// FormData chỉ hoạt động với POST method trong PHP
+// Check if FormData or JSON
+// FormData only working with POST method in PHP
 $isFormData = ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['question_id']) || isset($_FILES['image'])));
 
 if ($isFormData) {
-    // Xử lý FormData (POST method)
+    // Handle FormData (POST method)
     $question_id = isset($_POST['question_id']) ? (int)$_POST['question_id'] : 0;
     $title = trim($_POST['title'] ?? '');
     $content = trim($_POST['content'] ?? '');
     $module_id = isset($_POST['module_id']) && $_POST['module_id'] !== '' ? (int)$_POST['module_id'] : null;
 } else {
-    // Xử lý JSON (PUT method)
+    // Handle JSON (PUT method)
     $data = json_decode(file_get_contents('php://input'), true);
     $question_id = isset($data['question_id']) ? (int)$data['question_id'] : 0;
     $title = trim($data['title'] ?? '');
@@ -35,21 +35,21 @@ $user_id = $_SESSION['user_id'];
 
 if ($question_id <= 0 || empty($title) || empty($content)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
+    echo json_encode(['success' => false, 'message' => 'Invalid Data']);
     exit();
 }
 
 try {
     $pdo = getDBConnection();
 
-    // Kiểm tra quyền sở hữu hoặc quyền admin
+    // Check ownership or admin rights
     $stmt = $pdo->prepare("SELECT user_id, images FROM questions WHERE question_id = ?");
     $stmt->execute([$question_id]);
     $question = $stmt->fetch();
 
     if (!$question) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Không tìm thấy câu hỏi']);
+        echo json_encode(['success' => false, 'message' => 'Answer not found']);
         exit();
     }
 
@@ -57,17 +57,17 @@ try {
 
     if ($question['user_id'] != $user_id && !isAdmin()) {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Bạn không có quyền chỉnh sửa câu hỏi này']);
+        echo json_encode(['success' => false, 'message' => 'You do not have permission to edit this question']);
         exit();
     }
 
-    // Xử lý upload ảnh nếu có
-    $imagePath = $question['images']; // Giữ nguyên ảnh cũ nếu không upload mới
+    // Process image uploads if have any
+    $imagePath = $question['images']; // Keep old photo if no upload
     
     if ($isFormData && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['image'];
         
-        // Kiểm tra loại file
+        // Check file type
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         $file_type = $file['type'];
         
@@ -77,44 +77,44 @@ try {
             exit();
         }
         
-        // Kiểm tra kích thước file (tối đa 5MB)
+        // Check file size (max 5MB)
         $max_size = 5 * 1024 * 1024; // 5MB
         if ($file['size'] > $max_size) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'File ảnh không được vượt quá 5MB']);
+            echo json_encode(['success' => false, 'message' => 'Image files must not exceed 5MB']);
             exit();
         }
         
-        // Tạo thư mục uploads nếu chưa có (dùng đường dẫn tuyệt đối)
+        // Create uploads folder if it doesn't exist (use absolute path)
         $upload_dir = __DIR__ . '/../../uploads/questions/';
         if (!file_exists($upload_dir)) {
             mkdir($upload_dir, 0755, true);
         }
         
-        // Tạo tên file unique
+        // Create unique file names
         $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $file_name = uniqid() . '_' . time() . '.' . $file_extension;
         $file_path = $upload_dir . $file_name;
         
         // Upload file
         if (move_uploaded_file($file['tmp_name'], $file_path)) {
-            // Xóa ảnh cũ nếu có (dùng đường dẫn tuyệt đối)
+            // Delete old photos if any (use absolute path)
             if ($question['images'] && !empty($question['images'])) {
                 $old_image_path = __DIR__ . '/../../' . $question['images'];
                 if (file_exists($old_image_path)) {
                     @unlink($old_image_path);
                 }
             }
-            // Lưu đường dẫn tương đối vào database (giống như create.php)
+            // Save relative path to database (like create.php)
             $imagePath = 'uploads/questions/' . $file_name;
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Không thể upload ảnh. Vui lòng kiểm tra quyền ghi file.']);
+            echo json_encode(['success' => false, 'message' => 'Unable to upload image. Please check file write permissions.']);
             exit();
         }
     }
     
-    // Cập nhật câu hỏi
+    // Update question
     if ($module_id !== null) {
         $stmt = $pdo->prepare("UPDATE questions SET title = ?, content = ?, module_id = ?, images = ? WHERE question_id = ?");
         $stmt->execute([$title, $content, $module_id, $imagePath, $question_id]);
@@ -123,10 +123,10 @@ try {
         $stmt->execute([$title, $content, $imagePath, $question_id]);
     }
 
-    echo json_encode(['success' => true, 'message' => 'Cập nhật câu hỏi thành công']);
+    echo json_encode(['success' => true, 'message' => 'Update question successfully']);
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Có lỗi xảy ra khi cập nhật']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred while updating.']);
 }
 ?>
 

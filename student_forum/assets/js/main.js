@@ -428,7 +428,7 @@ window.toggleLikeQuestion = async function toggleLikeQuestion(questionId) {
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
             const text = await response.text();
-            if (text.includes('login') || text.includes('Đăng nhập')) {
+            if (text.includes('login') || text.includes('Log In')) {
                 alert('Please login to like the question');
                 window.location.href = 'login.php';
             }
@@ -458,7 +458,7 @@ window.toggleLikeQuestion = async function toggleLikeQuestion(questionId) {
                 }
             }
         } else {
-            if (data.message && data.message.includes('đăng nhập')) {
+            if (data.message && data.message.includes('log in')) {
                 alert('Please login to like the question');
                 window.location.href = 'login.php';
             } else {

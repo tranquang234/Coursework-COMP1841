@@ -773,7 +773,7 @@ async function loadModules() {
         console.log('Response status:', response.status, response.statusText);
         
         if (!response.ok) {
-            // Đọc response text để xem lỗi chi tiết
+            // Server returned invalid data
             const errorText = await response.text();
             console.error('Error response text:', errorText);
             
@@ -796,7 +796,7 @@ async function loadModules() {
         } catch (parseError) {
             console.error('JSON parse error:', parseError);
             console.error('Response text:', responseText);
-            throw new Error('Server trả về dữ liệu không hợp lệ: ' + responseText.substring(0, 200));
+            throw new Error('Server returned invalid data: ' + responseText.substring(0, 200));
         }
         
         console.log('Modules API response:', data);
@@ -805,7 +805,7 @@ async function loadModules() {
             const modules = data.modules || [];
             displayModules(modules);
             
-            // Hiển thị thông báo nếu có message từ server (ví dụ: bảng mới được tạo)
+            // Show a notification if there is a message from the server (e.g. a new table is created)
             if (data.message) {
                 showNotification(data.message, 'info');
             }

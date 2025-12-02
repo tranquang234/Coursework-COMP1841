@@ -18,7 +18,7 @@ function getDBConnection() {
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         return $pdo;
     } catch (PDOException $e) {
-        die("Kết nối thất bại: " . $e->getMessage());
+        die("Connect unsuccessfully: " . $e->getMessage());
     }
 }
 
